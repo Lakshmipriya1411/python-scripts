@@ -37,7 +37,6 @@ def upload_file(object_data, bucket, object_name=None):
         print("Credentials not available")
         return False
 import oci
-import logging
 import boto3
 from botocore.exceptions import ClientError
 from botocore.exceptions import NoCredentialsError
