@@ -1,5 +1,5 @@
 
-def upload_file(file_name, bucket, object_name=None):
+def upload_file(object_data, bucket, object_name=None):
     """Upload a file to an S3 bucket
 
     :param file_name: File to upload
@@ -10,17 +10,24 @@ def upload_file(file_name, bucket, object_name=None):
 
     # If S3 object_name was not specified, use file_name
     if object_name is None:
-        object_name = os.path.basename(file_name)
+        object_name = os.path.basename('file_name')
 
     load_dotenv()
     ACCESS_KEY = os.getenv('ACCESS_KEY')
     SECRET_KEY = os.getenv('SECRET_KEY')
     # Upload the file
-    s3 = boto3.client('s3', aws_access_key_id=ACCESS_KEY,
-                      aws_secret_access_key=SECRET_KEY)
+    # s3 = boto3.client('s3', aws_access_key_id=ACCESS_KEY,
+    #                   aws_secret_access_key=SECRET_KEY)
+    session = boto3.Session(
+        aws_access_key_id=ACCESS_KEY,
+        aws_secret_access_key=SECRET_KEY
+    )
+    s3 = session.resource('s3')
+    object = s3.Object(bucket, object_name)
 
     try:
-        s3.upload_file(file_name, bucket, object_name)
+        #s3.upload_file(file_name, bucket, object_name)
+        result = object.put(Body=object_data)
         print("Upload Successful")
         return True
     except FileNotFoundError:
@@ -30,7 +37,6 @@ def upload_file(file_name, bucket, object_name=None):
         print("Credentials not available")
         return False
 import oci
-import logging
 import boto3
 from botocore.exceptions import ClientError
 from botocore.exceptions import NoCredentialsError
@@ -46,7 +52,8 @@ identity = oci.identity.IdentityClient(config)
 
 import oci
 import os
-				
+import pandas as pd		
+import gzip		
 			
 #reporting_namespace = 'ax8hkeiizrq6'
 reporting_namespace = 'bling'
@@ -75,14 +82,20 @@ for o in report_bucket_objects.data.objects:
     
     object_details = object_storage.get_object(reporting_namespace, reporting_bucket, o.name)
     filename = o.name.rsplit('/', 1)[-1]
-	
-    with open(destintation_path + '/' + filename, 'wb') as f:
-        for chunk in object_details.data.raw.stream(1024 * 1024, decode_content=False):
-            f.write(chunk)
     
-    upload_file(destintation_path + '/' + filename,"oci-data-bucket",filename)
-
-				
+    print(o)
+     	
+    with open(destintation_path + '/' + filename, 'wb') as f:
+        for chunk in object_details.data.raw.stream(1024 * 1024, decode_content=True):
+            print(chunk)
+            f.write(chunk)
+  
+    with gzip.open(destintation_path + '/' + filename, 'rb') as f:
+        file_content = f.read()
+   
+    fn=filename.rsplit('.',1)[-2]
+    #print(fn)
+    upload_file(file_content,"oci-data-bucket",fn)			
     print('----> File ' + o.name + ' Downloaded')
     
 
